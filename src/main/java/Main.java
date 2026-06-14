@@ -1,5 +1,7 @@
 import java.util.Scanner;
 import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
 import java.io.File;
 
 public class Main {
@@ -12,25 +14,41 @@ public class Main {
             System.out.flush();
             
             String input = scanner.nextLine().trim();
-            
-            if (input.equals("exit") || input.equals("exit 0")) {
+            String[] parts = input.split("\\s+");
+            String cmd = parts[0];
+
+            if (cmd.equals("exit") || input.equals("exit 0")) {
                 System.exit(0);
-            } else if (input.startsWith("echo ")) {
+            } else if (cmd.equals("echo")) {
                 System.out.println(input.substring(5));
-            } else if (input.startsWith("type ")) {
-                String cmd = input.substring(5).trim();
-                if (builtins.contains(cmd)) {
-                    System.out.println(cmd + " is a shell builtin");
+            } else if (cmd.equals("type")) {
+                String target = parts[1];
+                if (builtins.contains(target)) {
+                    System.out.println(target + " is a shell builtin");
                 } else {
-                    String path = findInPath(cmd);
+                    String path = findInPath(target);
                     if (path != null) {
-                        System.out.println(cmd + " is " + path);
+                        System.out.println(target + " is " + path);
                     } else {
-                        System.out.println(cmd + ": not found");
+                        System.out.println(target + ": not found");
                     }
                 }
             } else {
-                System.out.println(input + ": command not found");
+                // Try to run as external program
+                String path = findInPath(cmd);
+                if (path != null) {
+                    List<String> command = new ArrayList<>();
+                    command.add(path);
+                    for (int i = 1; i < parts.length; i++) {
+                        command.add(parts[i]);
+                    }
+                    ProcessBuilder pb = new ProcessBuilder(command);
+                    pb.inheritIO();
+                    Process p = pb.start();
+                    p.waitFor();
+                } else {
+                    System.out.println(cmd + ": command not found");
+                }
             }
         }
     }
