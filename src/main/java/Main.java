@@ -34,15 +34,15 @@ public class Main {
                     }
                 }
             } else {
-                // Try to run as external program
                 String path = findInPath(cmd);
                 if (path != null) {
                     List<String> command = new ArrayList<>();
-                    command.add(path);
+                    command.add(cmd);
                     for (int i = 1; i < parts.length; i++) {
                         command.add(parts[i]);
                     }
                     ProcessBuilder pb = new ProcessBuilder(command);
+                    pb.environment().put("PATH", System.getenv("PATH"));
                     pb.inheritIO();
                     Process p = pb.start();
                     p.waitFor();
