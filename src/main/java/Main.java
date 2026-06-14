@@ -10,7 +10,7 @@ public class Main {
             
             String input = scanner.nextLine().trim();
             
-            if (input.equals("exit 0")) {
+            if (input.equals("exit") || input.equals("exit 0")) {
                 System.exit(0);
             }
             
