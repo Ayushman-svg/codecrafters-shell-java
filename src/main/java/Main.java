@@ -10,6 +10,10 @@ public class Main {
             
             String input = scanner.nextLine().trim();
             
+            if (input.equals("exit 0")) {
+                System.exit(0);
+            }
+            
             System.out.println(input + ": command not found");
         }
     }
