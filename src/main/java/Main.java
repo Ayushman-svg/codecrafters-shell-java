@@ -29,9 +29,15 @@ public class Main {
                 System.out.println(currentDir.toAbsolutePath());
             } else if (cmd.equals("cd")) {
                 String target = parts.length > 1 ? parts[1] : System.getenv("HOME");
-                Path newDir = Paths.get(target);
+                Path newDir;
+                if (target.startsWith("/")) {
+                    newDir = Paths.get(target);
+                } else {
+                    newDir = currentDir.resolve(target);
+                }
+                newDir = newDir.normalize();
                 if (newDir.toFile().isDirectory()) {
-                    currentDir = newDir.toAbsolutePath().normalize();
+                    currentDir = newDir;
                 } else {
                     System.out.println("cd: " + target + ": No such file or directory");
                 }
