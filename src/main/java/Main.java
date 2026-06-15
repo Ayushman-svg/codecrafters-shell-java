@@ -3,16 +3,20 @@ import java.util.Set;
 import java.util.List;
 import java.util.ArrayList;
 import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class Main {
+    static Path currentDir = Paths.get(System.getProperty("user.dir"));
+
     public static void main(String[] args) throws Exception {
         Scanner scanner = new Scanner(System.in);
         Set<String> builtins = Set.of("echo", "exit", "type", "pwd", "cd");
-        
+
         while (true) {
             System.out.print("$ ");
             System.out.flush();
-            
+
             String input = scanner.nextLine().trim();
             String[] parts = input.split("\\s+");
             String cmd = parts[0];
@@ -21,6 +25,8 @@ public class Main {
                 System.exit(0);
             } else if (cmd.equals("echo")) {
                 System.out.println(input.substring(5));
+            } else if (cmd.equals("pwd")) {
+                System.out.println(currentDir.toAbsolutePath());
             } else if (cmd.equals("type")) {
                 String target = parts[1];
                 if (builtins.contains(target)) {
@@ -44,6 +50,7 @@ public class Main {
                     ProcessBuilder pb = new ProcessBuilder(command);
                     pb.environment().put("PATH", System.getenv("PATH"));
                     pb.inheritIO();
+                    pb.directory(currentDir.toFile());
                     Process p = pb.start();
                     p.waitFor();
                 } else {
