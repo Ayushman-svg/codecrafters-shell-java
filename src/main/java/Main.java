@@ -27,6 +27,14 @@ public class Main {
                 System.out.println(input.substring(5));
             } else if (cmd.equals("pwd")) {
                 System.out.println(currentDir.toAbsolutePath());
+            } else if (cmd.equals("cd")) {
+                String target = parts.length > 1 ? parts[1] : System.getenv("HOME");
+                Path newDir = Paths.get(target);
+                if (newDir.toFile().isDirectory()) {
+                    currentDir = newDir.toAbsolutePath().normalize();
+                } else {
+                    System.out.println("cd: " + target + ": No such file or directory");
+                }
             } else if (cmd.equals("type")) {
                 String target = parts[1];
                 if (builtins.contains(target)) {
