@@ -28,7 +28,13 @@ public class Main {
             } else if (cmd.equals("pwd")) {
                 System.out.println(currentDir.toAbsolutePath());
             } else if (cmd.equals("cd")) {
-                String target = parts.length > 1 ? parts[1] : System.getenv("HOME");
+                String target = parts.length > 1 ? parts[1] : "~";
+                
+                // Handle ~ for home directory
+                if (target.equals("~")) {
+                    target = System.getenv("HOME");
+                }
+
                 Path newDir;
                 if (target.startsWith("/")) {
                     newDir = Paths.get(target);
