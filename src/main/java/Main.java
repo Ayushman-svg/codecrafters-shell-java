@@ -17,24 +17,25 @@ public class Main {
             System.out.print("$ ");
             System.out.flush();
 
-            String input = scanner.nextLine().trim();
-            String[] parts = input.split("\\s+");
-            String cmd = parts[0];
+            String input = scanner.nextLine();
+            List<String> tokens = tokenize(input);
+            if (tokens.isEmpty()) continue;
 
-            if (cmd.equals("exit") || input.equals("exit 0")) {
+            String cmd = tokens.get(0);
+
+            if (cmd.equals("exit") || cmd.equals("exit 0")) {
                 System.exit(0);
             } else if (cmd.equals("echo")) {
-                System.out.println(input.substring(5));
+                // Print all args joined by space
+                List<String> echoArgs = tokens.subList(1, tokens.size());
+                System.out.println(String.join(" ", echoArgs));
             } else if (cmd.equals("pwd")) {
                 System.out.println(currentDir.toAbsolutePath());
             } else if (cmd.equals("cd")) {
-                String target = parts.length > 1 ? parts[1] : "~";
-                
-                // Handle ~ for home directory
+                String target = tokens.size() > 1 ? tokens.get(1) : "~";
                 if (target.equals("~")) {
                     target = System.getenv("HOME");
                 }
-
                 Path newDir;
                 if (target.startsWith("/")) {
                     newDir = Paths.get(target);
@@ -48,7 +49,7 @@ public class Main {
                     System.out.println("cd: " + target + ": No such file or directory");
                 }
             } else if (cmd.equals("type")) {
-                String target = parts[1];
+                String target = tokens.get(1);
                 if (builtins.contains(target)) {
                     System.out.println(target + " is a shell builtin");
                 } else {
@@ -62,12 +63,7 @@ public class Main {
             } else {
                 String path = findInPath(cmd);
                 if (path != null) {
-                    List<String> command = new ArrayList<>();
-                    command.add(cmd);
-                    for (int i = 1; i < parts.length; i++) {
-                        command.add(parts[i]);
-                    }
-                    ProcessBuilder pb = new ProcessBuilder(command);
+                    ProcessBuilder pb = new ProcessBuilder(tokens);
                     pb.environment().put("PATH", System.getenv("PATH"));
                     pb.inheritIO();
                     pb.directory(currentDir.toFile());
@@ -78,6 +74,68 @@ public class Main {
                 }
             }
         }
+    }
+
+    // Tokenizer supporting single quotes, double quotes, backslash
+    static List<String> tokenize(String input) {
+        List<String> tokens = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inSingle = false;
+        boolean inDouble = false;
+        int i = 0;
+
+        while (i < input.length()) {
+            char c = input.charAt(i);
+
+            if (inSingle) {
+                if (c == '\'') {
+                    inSingle = false;
+                } else {
+                    current.append(c);
+                }
+            } else if (inDouble) {
+                if (c == '"') {
+                    inDouble = false;
+                } else if (c == '\\') {
+                    if (i + 1 < input.length()) {
+                        char next = input.charAt(i + 1);
+                        if (next == '"' || next == '\\' || next == '$' || next == '`' || next == '\n') {
+                            current.append(next);
+                            i++;
+                        } else {
+                            current.append(c);
+                        }
+                    }
+                } else {
+                    current.append(c);
+                }
+            } else {
+                if (c == '\'') {
+                    inSingle = true;
+                } else if (c == '"') {
+                    inDouble = true;
+                } else if (c == '\\') {
+                    if (i + 1 < input.length()) {
+                        current.append(input.charAt(i + 1));
+                        i++;
+                    }
+                } else if (c == ' ' || c == '\t') {
+                    if (current.length() > 0) {
+                        tokens.add(current.toString());
+                        current.setLength(0);
+                    }
+                } else {
+                    current.append(c);
+                }
+            }
+            i++;
+        }
+
+        if (current.length() > 0) {
+            tokens.add(current.toString());
+        }
+
+        return tokens;
     }
 
     static String findInPath(String cmd) {
