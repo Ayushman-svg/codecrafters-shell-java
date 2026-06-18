@@ -2,6 +2,7 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
@@ -10,6 +11,8 @@ import java.nio.file.Paths;
 
 public class Main {
     static Path currentDir = Paths.get(System.getProperty("user.dir"));
+    static AtomicInteger jobCounter = new AtomicInteger(0);
+    static List<long[]> backgroundJobs = new ArrayList<>();
 
     public static void main(String[] args) throws Exception {
         Scanner scanner = new Scanner(System.in);
@@ -23,7 +26,14 @@ public class Main {
             List<String> tokens = tokenize(input);
             if (tokens.isEmpty()) continue;
 
-            // Parse redirections
+            boolean isBackground = !tokens.isEmpty() && tokens.get(tokens.size() - 1).equals("&");
+            if (isBackground) {
+                tokens = new ArrayList<>(tokens);
+                tokens.remove(tokens.size() - 1);
+            }
+
+            if (tokens.isEmpty()) continue;
+
             String stdoutFile = null;
             String stderrFile = null;
             boolean appendStdout = false;
@@ -52,7 +62,6 @@ public class Main {
             if (cmdTokens.isEmpty()) continue;
             String cmd = cmdTokens.get(0);
 
-            // Setup output streams
             PrintStream outStream = System.out;
             PrintStream errStream = System.err;
 
@@ -105,7 +114,12 @@ public class Main {
                 }
 
             } else if (cmd.equals("jobs")) {
-                // Empty implementation for AF2 stage
+                backgroundJobs.removeIf(job ->
+                    !ProcessHandle.of(job[1]).map(ProcessHandle::isAlive).orElse(false)
+                );
+                for (long[] job : backgroundJobs) {
+                    outStream.println("[" + job[0] + "] running (pid " + job[1] + ")");
+                }
 
             } else if (cmd.equals("type")) {
                 if (cmdTokens.size() < 2) {
@@ -118,7 +132,6 @@ public class Main {
                     outStream.println(target + " is a shell builtin");
                 } else {
                     String path = findInPath(target);
-
                     if (path != null) {
                         outStream.println(target + " is " + path);
                     } else {
@@ -139,7 +152,6 @@ public class Main {
                         if (!outFile.isAbsolute()) {
                             outFile = new File(currentDir.toFile(), stdoutFile);
                         }
-
                         pb.redirectOutput(
                             appendStdout
                                 ? ProcessBuilder.Redirect.appendTo(outFile)
@@ -154,7 +166,6 @@ public class Main {
                         if (!errFile.isAbsolute()) {
                             errFile = new File(currentDir.toFile(), stderrFile);
                         }
-
                         pb.redirectError(
                             appendStderr
                                 ? ProcessBuilder.Redirect.appendTo(errFile)
@@ -165,7 +176,15 @@ public class Main {
                     }
 
                     Process p = pb.start();
-                    p.waitFor();
+
+                    if (isBackground) {
+                        int jobNum = jobCounter.incrementAndGet();
+                        long pid = p.pid();
+                        backgroundJobs.add(new long[]{jobNum, pid});
+                        System.out.println("[" + jobNum + "] " + pid);
+                    } else {
+                        p.waitFor();
+                    }
 
                 } else {
                     errStream.println(cmd + ": command not found");
@@ -206,7 +225,6 @@ public class Main {
                 } else if (c == '\\') {
                     if (i + 1 < input.length()) {
                         char next = input.charAt(i + 1);
-
                         if (next == '"' || next == '\\' || next == '$' || next == '`' || next == '\n') {
                             current.append(next);
                             i++;
@@ -256,14 +274,12 @@ public class Main {
 
         for (String dir : pathEnv.split(File.pathSeparator)) {
             File f = new File(dir, cmd);
-
             if (f.exists() && f.canExecute()) {
                 return f.getAbsolutePath();
             }
 
             if (System.getProperty("os.name").toLowerCase().contains("win")) {
                 File exe = new File(dir, cmd + ".exe");
-
                 if (exe.exists() && exe.canExecute()) {
                     return exe.getAbsolutePath();
                 }
