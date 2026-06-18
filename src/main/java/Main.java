@@ -134,9 +134,17 @@ public class Main {
 
             } else if (cmd.equals("jobs")) {
                 backgroundJobs.removeIf(job -> !job.isAlive());
+                int last = backgroundJobs.size() - 1;
                 for (int i = 0; i < backgroundJobs.size(); i++) {
                     Job job = backgroundJobs.get(i);
-                    String marker = (i == backgroundJobs.size() - 1) ? "+" : "-";
+                    String marker;
+                    if (i == last) {
+                        marker = "+";
+                    } else if (i == last - 1) {
+                        marker = "-";
+                    } else {
+                        marker = " ";
+                    }
                     String status = String.format("%-24s", "Running");
                     outStream.println("[" + job.number + "]" + marker + " " + status + job.command + " &");
                 }
