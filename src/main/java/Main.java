@@ -12,7 +12,26 @@ import java.nio.file.Paths;
 public class Main {
     static Path currentDir = Paths.get(System.getProperty("user.dir"));
     static AtomicInteger jobCounter = new AtomicInteger(0);
-    static List<long[]> backgroundJobs = new ArrayList<>();
+
+    static class Job {
+        int number;
+        long pid;
+        String command;
+        Process process;
+
+        Job(int number, long pid, String command, Process process) {
+            this.number = number;
+            this.pid = pid;
+            this.command = command;
+            this.process = process;
+        }
+
+        boolean isAlive() {
+            return process.isAlive();
+        }
+    }
+
+    static List<Job> backgroundJobs = new ArrayList<>();
 
     public static void main(String[] args) throws Exception {
         Scanner scanner = new Scanner(System.in);
@@ -114,11 +133,12 @@ public class Main {
                 }
 
             } else if (cmd.equals("jobs")) {
-                backgroundJobs.removeIf(job ->
-                    !ProcessHandle.of(job[1]).map(ProcessHandle::isAlive).orElse(false)
-                );
-                for (long[] job : backgroundJobs) {
-                    outStream.println("[" + job[0] + "] running (pid " + job[1] + ")");
+                backgroundJobs.removeIf(job -> !job.isAlive());
+                for (int i = 0; i < backgroundJobs.size(); i++) {
+                    Job job = backgroundJobs.get(i);
+                    String marker = (i == backgroundJobs.size() - 1) ? "+" : "-";
+                    String status = String.format("%-24s", "Running");
+                    outStream.println("[" + job.number + "]" + marker + " " + status + job.command + " &");
                 }
 
             } else if (cmd.equals("type")) {
@@ -180,7 +200,8 @@ public class Main {
                     if (isBackground) {
                         int jobNum = jobCounter.incrementAndGet();
                         long pid = p.pid();
-                        backgroundJobs.add(new long[]{jobNum, pid});
+                        String cmdString = String.join(" ", cmdTokens);
+                        backgroundJobs.add(new Job(jobNum, pid, cmdString, p));
                         System.out.println("[" + jobNum + "] " + pid);
                     } else {
                         p.waitFor();
