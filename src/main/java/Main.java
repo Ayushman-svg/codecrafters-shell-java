@@ -133,34 +133,23 @@ public class Main {
                 }
 
             } else if (cmd.equals("jobs")) {
+                int n = backgroundJobs.size();
+                int last = n - 1;
+                int secondLast = n - 2;
+
                 List<Job> remaining = new ArrayList<>();
-                int lastRunning = -1;
 
-                for (int i = 0; i < backgroundJobs.size(); i++) {
-                    if (backgroundJobs.get(i).isAlive()) {
-                        lastRunning = i;
-                    }
-                }
-
-                int secondLastRunning = -1;
-                for (int i = lastRunning - 1; i >= 0; i--) {
-                    if (backgroundJobs.get(i).isAlive()) {
-                        secondLastRunning = i;
-                        break;
-                    }
-                }
-
-                for (int i = 0; i < backgroundJobs.size(); i++) {
+                for (int i = 0; i < n; i++) {
                     Job job = backgroundJobs.get(i);
+                    String marker = (i == last) ? "+" : (i == secondLast) ? "-" : " ";
 
                     if (job.isAlive()) {
-                        String marker = (i == lastRunning) ? "+" : (i == secondLastRunning) ? "-" : " ";
                         String status = String.format("%-24s", "Running");
                         outStream.println("[" + job.number + "]" + marker + " " + status + job.command + " &");
                         remaining.add(job);
                     } else {
                         String status = String.format("%-24s", "Done");
-                        outStream.println("[" + job.number + "]+ " + status + job.command);
+                        outStream.println("[" + job.number + "]" + marker + " " + status + job.command);
                     }
                 }
 
