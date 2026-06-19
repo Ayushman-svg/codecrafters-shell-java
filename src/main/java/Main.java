@@ -38,6 +38,8 @@ public class Main {
         Set<String> builtins = Set.of("echo", "exit", "type", "pwd", "cd", "jobs");
 
         while (true) {
+            reapDoneJobs(System.out);
+
             System.out.print("$ ");
             System.out.flush();
 
@@ -137,23 +139,12 @@ public class Main {
                 int last = n - 1;
                 int secondLast = n - 2;
 
-                List<Job> remaining = new ArrayList<>();
-
                 for (int i = 0; i < n; i++) {
                     Job job = backgroundJobs.get(i);
                     String marker = (i == last) ? "+" : (i == secondLast) ? "-" : " ";
-
-                    if (job.isAlive()) {
-                        String status = String.format("%-24s", "Running");
-                        outStream.println("[" + job.number + "]" + marker + " " + status + job.command + " &");
-                        remaining.add(job);
-                    } else {
-                        String status = String.format("%-24s", "Done");
-                        outStream.println("[" + job.number + "]" + marker + " " + status + job.command);
-                    }
+                    String status = String.format("%-24s", "Running");
+                    outStream.println("[" + job.number + "]" + marker + " " + status + job.command + " &");
                 }
-
-                backgroundJobs = remaining;
 
             } else if (cmd.equals("type")) {
                 if (cmdTokens.size() < 2) {
@@ -234,6 +225,28 @@ public class Main {
                 errStream.close();
             }
         }
+    }
+
+    static void reapDoneJobs(PrintStream outStream) {
+        int n = backgroundJobs.size();
+        int last = n - 1;
+        int secondLast = n - 2;
+
+        List<Job> remaining = new ArrayList<>();
+
+        for (int i = 0; i < n; i++) {
+            Job job = backgroundJobs.get(i);
+
+            if (job.isAlive()) {
+                remaining.add(job);
+            } else {
+                String marker = (i == last) ? "+" : (i == secondLast) ? "-" : " ";
+                String status = String.format("%-24s", "Done");
+                outStream.println("[" + job.number + "]" + marker + " " + status + job.command);
+            }
+        }
+
+        backgroundJobs = remaining;
     }
 
     static List<String> tokenize(String input) {
