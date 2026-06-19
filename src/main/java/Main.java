@@ -133,21 +133,38 @@ public class Main {
                 }
 
             } else if (cmd.equals("jobs")) {
-                backgroundJobs.removeIf(job -> !job.isAlive());
-                int last = backgroundJobs.size() - 1;
+                List<Job> remaining = new ArrayList<>();
+                int lastRunning = -1;
+
+                for (int i = 0; i < backgroundJobs.size(); i++) {
+                    if (backgroundJobs.get(i).isAlive()) {
+                        lastRunning = i;
+                    }
+                }
+
+                int secondLastRunning = -1;
+                for (int i = lastRunning - 1; i >= 0; i--) {
+                    if (backgroundJobs.get(i).isAlive()) {
+                        secondLastRunning = i;
+                        break;
+                    }
+                }
+
                 for (int i = 0; i < backgroundJobs.size(); i++) {
                     Job job = backgroundJobs.get(i);
-                    String marker;
-                    if (i == last) {
-                        marker = "+";
-                    } else if (i == last - 1) {
-                        marker = "-";
+
+                    if (job.isAlive()) {
+                        String marker = (i == lastRunning) ? "+" : (i == secondLastRunning) ? "-" : " ";
+                        String status = String.format("%-24s", "Running");
+                        outStream.println("[" + job.number + "]" + marker + " " + status + job.command + " &");
+                        remaining.add(job);
                     } else {
-                        marker = " ";
+                        String status = String.format("%-24s", "Done");
+                        outStream.println("[" + job.number + "]+ " + status + job.command);
                     }
-                    String status = String.format("%-24s", "Running");
-                    outStream.println("[" + job.number + "]" + marker + " " + status + job.command + " &");
                 }
+
+                backgroundJobs = remaining;
 
             } else if (cmd.equals("type")) {
                 if (cmdTokens.size() < 2) {
