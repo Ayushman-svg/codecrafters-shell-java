@@ -135,6 +135,8 @@ public class Main {
                 }
 
             } else if (cmd.equals("jobs")) {
+                reapDoneJobs(outStream);
+
                 int n = backgroundJobs.size();
                 int last = n - 1;
                 int secondLast = n - 2;
