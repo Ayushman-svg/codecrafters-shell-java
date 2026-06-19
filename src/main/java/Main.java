@@ -2,7 +2,6 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
@@ -11,7 +10,6 @@ import java.nio.file.Paths;
 
 public class Main {
     static Path currentDir = Paths.get(System.getProperty("user.dir"));
-    static AtomicInteger jobCounter = new AtomicInteger(0);
 
     static class Job {
         int number;
@@ -194,7 +192,7 @@ public class Main {
                     Process p = pb.start();
 
                     if (isBackground) {
-                        int jobNum = jobCounter.incrementAndGet();
+                        int jobNum = nextJobNumber();
                         long pid = p.pid();
                         String cmdString = String.join(" ", cmdTokens);
                         backgroundJobs.add(new Job(jobNum, pid, cmdString, p));
@@ -216,6 +214,19 @@ public class Main {
                 errStream.close();
             }
         }
+    }
+
+    static int nextJobNumber() {
+        if (backgroundJobs.isEmpty()) {
+            return 1;
+        }
+        int highest = 0;
+        for (Job job : backgroundJobs) {
+            if (job.number > highest) {
+                highest = job.number;
+            }
+        }
+        return highest + 1;
     }
 
     static void reapDoneJobs(PrintStream outStream) {
