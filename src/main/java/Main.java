@@ -135,18 +135,7 @@ public class Main {
                 }
 
             } else if (cmd.equals("jobs")) {
-                reapDoneJobs(outStream);
-
-                int n = backgroundJobs.size();
-                int last = n - 1;
-                int secondLast = n - 2;
-
-                for (int i = 0; i < n; i++) {
-                    Job job = backgroundJobs.get(i);
-                    String marker = (i == last) ? "+" : (i == secondLast) ? "-" : " ";
-                    String status = String.format("%-24s", "Running");
-                    outStream.println("[" + job.number + "]" + marker + " " + status + job.command + " &");
-                }
+                printJobs(outStream, false);
 
             } else if (cmd.equals("type")) {
                 if (cmdTokens.size() < 2) {
@@ -230,6 +219,10 @@ public class Main {
     }
 
     static void reapDoneJobs(PrintStream outStream) {
+        printJobs(outStream, true);
+    }
+
+    static void printJobs(PrintStream outStream, boolean reapOnly) {
         int n = backgroundJobs.size();
         int last = n - 1;
         int secondLast = n - 2;
@@ -238,11 +231,15 @@ public class Main {
 
         for (int i = 0; i < n; i++) {
             Job job = backgroundJobs.get(i);
+            String marker = (i == last) ? "+" : (i == secondLast) ? "-" : " ";
 
             if (job.isAlive()) {
                 remaining.add(job);
+                if (!reapOnly) {
+                    String status = String.format("%-24s", "Running");
+                    outStream.println("[" + job.number + "]" + marker + " " + status + job.command + " &");
+                }
             } else {
-                String marker = (i == last) ? "+" : (i == secondLast) ? "-" : " ";
                 String status = String.format("%-24s", "Done");
                 outStream.println("[" + job.number + "]" + marker + " " + status + job.command);
             }
