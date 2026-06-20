@@ -280,6 +280,11 @@ public class Main {
 
         if (builders.isEmpty()) return;
 
+        System.err.println("DEBUG PATH: " + envVars.get("PATH"));
+        for (List<String> segment : segments) {
+            System.err.println("DEBUG SEGMENT: " + segment);
+        }
+
         List<Process> processes = ProcessBuilder.startPipeline(builders);
         Process last = processes.get(processes.size() - 1);
 
