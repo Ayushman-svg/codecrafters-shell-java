@@ -392,8 +392,8 @@ public class Main {
             backgroundJobs.add(new Job(jobNum, pid, cmdString, lastProcess));
             System.out.println("[" + jobNum + "] " + pid);
         } else {
-            for (Process p : externalProcesses) {
-                if (p != null) p.waitFor();
+            if (lastProcess != null) {
+                lastProcess.waitFor();
             }
             for (Thread t : builtinThreads) {
                 if (t != null) t.join();
