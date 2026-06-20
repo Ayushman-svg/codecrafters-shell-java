@@ -267,7 +267,8 @@ public class Main {
     static void runPipeline(List<List<String>> segments, boolean isBackground) throws Exception {
         List<ProcessBuilder> builders = new ArrayList<>();
 
-        for (List<String> segment : segments) {
+        for (int i = 0; i < segments.size(); i++) {
+            List<String> segment = segments.get(i);
             if (segment.isEmpty()) continue;
 
             ProcessBuilder pb = new ProcessBuilder(segment);
@@ -275,15 +276,15 @@ public class Main {
             pb.environment().putAll(envVars);
             pb.directory(currentDir.toFile());
             pb.redirectError(ProcessBuilder.Redirect.INHERIT);
+
+            if (i == segments.size() - 1) {
+                pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+            }
+
             builders.add(pb);
         }
 
         if (builders.isEmpty()) return;
-
-        System.err.println("DEBUG PATH: " + envVars.get("PATH"));
-        for (List<String> segment : segments) {
-            System.err.println("DEBUG SEGMENT: " + segment);
-        }
 
         List<Process> processes = ProcessBuilder.startPipeline(builders);
         Process last = processes.get(processes.size() - 1);
