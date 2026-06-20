@@ -296,7 +296,6 @@ public class Main {
 
             if (isBuiltin(cmd)) {
                 PipedOutputStream pipeOut = new PipedOutputStream();
-                InputStream myInput = prevStdout;
                 PrintStream builtinOut;
                 InputStream nextInput = null;
 
@@ -364,6 +363,7 @@ public class Main {
                             int len;
                             while ((len = src.read(buf)) != -1) {
                                 dst.write(buf, 0, len);
+                                dst.flush();
                             }
                         } catch (Exception ignored) {
                         } finally {
