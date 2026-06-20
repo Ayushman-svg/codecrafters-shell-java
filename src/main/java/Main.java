@@ -2,6 +2,8 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
@@ -10,6 +12,7 @@ import java.nio.file.Paths;
 
 public class Main {
     static Path currentDir = Paths.get(System.getProperty("user.dir"));
+    static Map<String, String> envVars = new HashMap<>(System.getenv());
 
     static class Job {
         int number;
@@ -33,7 +36,7 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
         Scanner scanner = new Scanner(System.in);
-        Set<String> builtins = Set.of("echo", "exit", "type", "pwd", "cd", "jobs");
+        Set<String> builtins = Set.of("echo", "exit", "type", "pwd", "cd", "jobs", "export");
 
         while (true) {
             reapDoneJobs(System.out);
@@ -117,7 +120,7 @@ public class Main {
                 String target = cmdTokens.size() > 1 ? cmdTokens.get(1) : "~";
 
                 if (target.equals("~")) {
-                    String home = System.getenv("HOME");
+                    String home = envVars.get("HOME");
                     if (home == null) {
                         home = System.getProperty("user.home");
                     }
@@ -137,6 +140,18 @@ public class Main {
                     currentDir = newDir;
                 } else {
                     errStream.println("cd: " + target + ": No such file or directory");
+                }
+
+            } else if (cmd.equals("export")) {
+                for (int i = 1; i < cmdTokens.size(); i++) {
+                    String assignment = cmdTokens.get(i);
+                    int eq = assignment.indexOf('=');
+                    if (eq != -1) {
+                        String key = assignment.substring(0, eq);
+                        String value = assignment.substring(eq + 1);
+                        value = expandVariables(value);
+                        envVars.put(key, value);
+                    }
                 }
 
             } else if (cmd.equals("jobs")) {
@@ -165,7 +180,8 @@ public class Main {
 
                 if (path != null) {
                     ProcessBuilder pb = new ProcessBuilder(cmdTokens);
-                    pb.environment().put("PATH", System.getenv("PATH"));
+                    pb.environment().clear();
+                    pb.environment().putAll(envVars);
                     pb.directory(currentDir.toFile());
 
                     if (stdoutFile != null) {
@@ -223,6 +239,14 @@ public class Main {
         }
     }
 
+    static String expandVariables(String value) {
+        if (value.contains("$PATH")) {
+            String currentPath = envVars.getOrDefault("PATH", "");
+            value = value.replace("$PATH", currentPath);
+        }
+        return value;
+    }
+
     static List<List<String>> splitOnPipe(List<String> tokens) {
         List<List<String>> segments = new ArrayList<>();
         List<String> current = new ArrayList<>();
@@ -247,7 +271,8 @@ public class Main {
             if (segment.isEmpty()) continue;
 
             ProcessBuilder pb = new ProcessBuilder(segment);
-            pb.environment().put("PATH", System.getenv("PATH"));
+            pb.environment().clear();
+            pb.environment().putAll(envVars);
             pb.directory(currentDir.toFile());
             pb.redirectError(ProcessBuilder.Redirect.INHERIT);
             builders.add(pb);
@@ -393,7 +418,7 @@ public class Main {
     }
 
     static String findInPath(String cmd) {
-        String pathEnv = System.getenv("PATH");
+        String pathEnv = envVars.get("PATH");
 
         if (pathEnv == null) {
             return null;
