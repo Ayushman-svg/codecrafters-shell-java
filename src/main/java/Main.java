@@ -53,6 +53,13 @@ public class Main {
 
             if (tokens.isEmpty()) continue;
 
+            List<List<String>> pipelineSegments = splitOnPipe(tokens);
+
+            if (pipelineSegments.size() > 1) {
+                runPipeline(pipelineSegments, isBackground);
+                continue;
+            }
+
             String stdoutFile = null;
             String stderrFile = null;
             boolean appendStdout = false;
@@ -216,6 +223,62 @@ public class Main {
         }
     }
 
+    static List<List<String>> splitOnPipe(List<String> tokens) {
+        List<List<String>> segments = new ArrayList<>();
+        List<String> current = new ArrayList<>();
+
+        for (String t : tokens) {
+            if (t.equals("|")) {
+                segments.add(current);
+                current = new ArrayList<>();
+            } else {
+                current.add(t);
+            }
+        }
+        segments.add(current);
+
+        return segments;
+    }
+
+    static void runPipeline(List<List<String>> segments, boolean isBackground) throws Exception {
+        List<ProcessBuilder> builders = new ArrayList<>();
+
+        for (List<String> segment : segments) {
+            if (segment.isEmpty()) continue;
+
+            ProcessBuilder pb = new ProcessBuilder(segment);
+            pb.environment().put("PATH", System.getenv("PATH"));
+            pb.directory(currentDir.toFile());
+            pb.redirectError(ProcessBuilder.Redirect.INHERIT);
+            builders.add(pb);
+        }
+
+        if (builders.isEmpty()) return;
+
+        List<Process> processes = ProcessBuilder.startPipeline(builders);
+        Process last = processes.get(processes.size() - 1);
+
+        if (isBackground) {
+            int jobNum = nextJobNumber();
+            long pid = last.pid();
+            String cmdString = pipelineToString(segments);
+            backgroundJobs.add(new Job(jobNum, pid, cmdString, last));
+            System.out.println("[" + jobNum + "] " + pid);
+        } else {
+            for (Process p : processes) {
+                p.waitFor();
+            }
+        }
+    }
+
+    static String pipelineToString(List<List<String>> segments) {
+        List<String> parts = new ArrayList<>();
+        for (List<String> segment : segments) {
+            parts.add(String.join(" ", segment));
+        }
+        return String.join(" | ", parts);
+    }
+
     static int nextJobNumber() {
         if (backgroundJobs.isEmpty()) {
             return 1;
@@ -303,6 +366,12 @@ public class Main {
                         current.append(input.charAt(i + 1));
                         i++;
                     }
+                } else if (c == '|') {
+                    if (current.length() > 0) {
+                        tokens.add(current.toString());
+                        current.setLength(0);
+                    }
+                    tokens.add("|");
                 } else if (c == ' ' || c == '\t') {
                     if (current.length() > 0) {
                         tokens.add(current.toString());
